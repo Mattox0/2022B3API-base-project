@@ -15,9 +15,12 @@ export class UsersService {
         return this.usersRepository.find();
     }
 
-    Create(user: CreatedUsersDto): CreatedUsersDto {
+    Create(user: CreatedUsersDto): Promise<User> {
         const newUser = this.usersRepository.create(user);
-        this.usersRepository.save(newUser);
-        return user;
+        return this.usersRepository.save(newUser);
+    }
+
+    FindOne(email: string): Promise<User> {
+        return this.usersRepository.findOneBy({email: email});
     }
 }
