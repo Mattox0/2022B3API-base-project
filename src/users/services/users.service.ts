@@ -20,7 +20,15 @@ export class UsersService {
         return this.usersRepository.save(newUser);
     }
 
-    FindOne(email: string): Promise<User> {
-        return this.usersRepository.findOneBy({email: email});
+    FindOneEmail(email: string): Promise<User> {
+        return this.usersRepository.findOne({ where: {email: email} });
+    }
+
+    FindOneUser(username: string): Promise<User> {
+        return this.usersRepository.findOne({ where: {username: username} });
+    }
+
+    FindOneId(id: string): Promise<User> {
+        return this.usersRepository.findOne({ where: {id: id} });
     }
 }

@@ -1,20 +1,23 @@
-import { Body, Controller, Post, Get, Request } from '@nestjs/common';
+import { Body, Controller, Post, Get, Request, Logger } from '@nestjs/common';
 import { CreatedUsersDto } from '../dto/users.dto';
 import { User } from '../users.entity';
 import { UsersService } from '../services/users.service';
-import { HttpException } from '@nestjs/common/exceptions';
+import { HttpException, UnauthorizedException } from '@nestjs/common/exceptions';
 import { HttpStatus } from '@nestjs/common/enums';
 import { ValidationPipe } from '@nestjs/common/pipes';
-import { UseGuards, UsePipes } from '@nestjs/common/decorators';
+import { Req, UseGuards, UsePipes } from '@nestjs/common/decorators';
 import { AuthGuard } from '@nestjs/passport/dist/auth.guard';
 import { LocalAuthGuard } from '../../auth/guards/local-auth.guard';
 import { AuthService } from '../../auth/services/auth.service';
+import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
+import { UserId } from '../dto/userId.dto';
 
 
 @Controller('users')
 export class UsersController {
   constructor(private usersService: UsersService, private authService: AuthService) {}
 
+  @UseGuards(JwtAuthGuard)
   @Get()
   GetAll(): {} {
     return this.usersService.GetAll();
@@ -33,9 +36,40 @@ export class UsersController {
     return this.usersService.Create(user);
   }
 
-  @UseGuards(LocalAuthGuard)
   @Post('auth/login')
-  async login(@Request() req) {
-    return this.authService.login(req.user);
+  async login(@Body() body) {
+    let user = await this.usersService.FindOneEmail(body.email);
+    if (!user || user.password !== body.password) {
+      throw new UnauthorizedException();
+    }
+    return this.authService.Login(user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  GetProfile(@Req() req) {
+    let user = req.user.username;
+    return this.usersService.FindOneUser(user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @UsePipes(ValidationPipe)
+  @Get(':id')
+  async GetRole(@Req() req) {
+    try {
+      let userId: UserId = {
+        id: req.params.id,
+      }
+      const user = await this.usersService.FindOneId(userId.id);
+      if (!user) {
+        throw new HttpException("User not found", HttpStatus.NOT_FOUND);
+      }
+      return user;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(error, HttpStatus.BAD_REQUEST);
+    }
   }
 }
