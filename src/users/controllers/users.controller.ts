@@ -1,21 +1,21 @@
-import { Body, Controller, Post, Get, Request, Logger } from '@nestjs/common';
+import { Body, Controller, Post, Get, Logger, Param } from '@nestjs/common';
 import { CreatedUsersDto } from '../dto/users.dto';
-import { User } from '../users.entity';
 import { UsersService } from '../services/users.service';
 import { HttpException, UnauthorizedException } from '@nestjs/common/exceptions';
 import { HttpStatus } from '@nestjs/common/enums';
 import { ValidationPipe } from '@nestjs/common/pipes';
 import { Req, UseGuards, UsePipes } from '@nestjs/common/decorators';
-import { AuthGuard } from '@nestjs/passport/dist/auth.guard';
-import { LocalAuthGuard } from '../../auth/guards/local-auth.guard';
 import { AuthService } from '../../auth/services/auth.service';
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
 import { UserId } from '../dto/userId.dto';
+import { EventService } from '../../events/services/events.service';
+import * as dayjs from 'dayjs';
 
 
 @Controller('users')
 export class UsersController {
-  constructor(private usersService: UsersService, private authService: AuthService) {}
+
+  constructor(private usersService: UsersService, private authService: AuthService, private eventService: EventService) {}
 
   @UseGuards(JwtAuthGuard)
   @Get()
@@ -25,15 +25,8 @@ export class UsersController {
 
   @UsePipes(ValidationPipe)
   @Post('/auth/sign-up')
-  SignUp(@Body() body: CreatedUsersDto): {} {  
-    let user: CreatedUsersDto = {
-      username: body.username,
-      email: body.email,
-      password: body.password,
-      role: body.role,
-    }
-    
-    return this.usersService.Create(user);
+  SignUp(@Body() body: CreatedUsersDto): {} {   
+    return this.usersService.Create(body);
   }
 
   @Post('auth/login')
@@ -55,7 +48,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @UsePipes(ValidationPipe)
   @Get(':id')
-  async GetRole(@Req() req) {
+  async GetId(@Req() req) {
     try {
       let userId: UserId = {
         id: req.params.id,
@@ -71,5 +64,25 @@ export class UsersController {
       }
       throw new HttpException(error, HttpStatus.BAD_REQUEST);
     }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/meal-vouchers/:month') 
+  async GetMealVouchers(@Param('id') id: string, @Param('month') Month: string) {
+    let month = parseInt(Month);
+    const start = dayjs().month(month)
+    const daysInMonth = start.daysInMonth()
+    const workingDays = [1,2,3,4,5]
+    let count = 0
+    for (let i = 1; i <= daysInMonth; i++) {
+      let date = dayjs().day(i).month(month).toDate()
+      let event = await this.eventService.CheckMeal(date, id);
+      if (event) {
+        count--;
+      } else if (workingDays.includes(dayjs().date(i).month(month).day())) {
+        count ++;
+      }
+    }
+    return count * 8;
   }
 }

@@ -11,8 +11,8 @@ export class UsersService {
         private usersRepository: Repository<User>,
     ) {}
     
-    GetAll(): Promise<User[]> {
-        return this.usersRepository.find();
+    async GetAll(): Promise<User[]> {
+        return await this.usersRepository.find();
     }
 
     Create(user: CreatedUsersDto): Promise<User> {
