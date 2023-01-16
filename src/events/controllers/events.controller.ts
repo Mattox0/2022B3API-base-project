@@ -14,7 +14,7 @@ import { appendFileSync } from "fs";
 
 
 @Controller('events')
-// @UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard)
 export class EventsController {
     constructor(private eventService: EventService, private userService: UsersService, private projectUserService: ProjectUserService, private projectService: ProjectsService) {}
     
